@@ -108,7 +108,7 @@ function RefreshBlips()
     for k, v in pairs(Config.Shops) do
         if v.Blip then
             for i = 1, #v.Pos do
-                local blip = AddBlipForCoord(v.Pos[i])
+                local blip = AddBlipForCoord(v.Pos[i].x, v.Pos[i].y, v.Pos[i].z)
                 SetBlipSprite(blip, v.Blip.sprite)
                 SetBlipDisplay(blip, v.Blip.display)
                 SetBlipScale(blip, v.Blip.scale)
@@ -209,7 +209,7 @@ Citizen.CreateThread(function()
 
         for k, v in pairs(Config.Shops) do
             for i = 1, #v.Pos do
-                local distance = #(coords - v.Pos[i])
+                local distance = #(coords - vector3(v.Pos[i].x, v.Pos[i].y, v.Pos[i].z))
                 local interactionDistance = v.UsePed and 2.0 or Config.Size.x
 
                 if distance < Config.DrawDistance then

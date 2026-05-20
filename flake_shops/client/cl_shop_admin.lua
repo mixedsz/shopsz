@@ -221,7 +221,10 @@ AddEventHandler('flake_shops:updateShops', function(shops)
             if shopDataCopy.Pos then
                 local positions = {}
                 for i, pos in ipairs(shopDataCopy.Pos) do
-                    table.insert(positions, {x = pos.x, y = pos.y, z = pos.z})
+                    local posEntry = {x = pos.x, y = pos.y, z = pos.z}
+                    if pos.heading    then posEntry.heading    = pos.heading    end
+                    if pos.useHeading then posEntry.useHeading = pos.useHeading end
+                    table.insert(positions, posEntry)
                 end
                 shopDataCopy.Pos = positions
             end

@@ -343,12 +343,12 @@ $(function() {
         }
     }
 
-    function addPositionEntry(x = "", y = "", z = "", heading = "", useHeading = false) {
+    function addPositionEntry(x = "", y = "", z = "", heading, useHeading = false) {
         positionCounter++;
         const id = positionCounter;
         const headingChecked = useHeading ? "checked" : "";
         const headingDisplay = useHeading ? "flex" : "none";
-        const headingVal = heading !== "" ? parseFloat(heading).toFixed(2) : "";
+        const headingVal = (heading !== undefined && heading !== null && heading !== "") ? parseFloat(heading).toFixed(2) : "";
         $("#positions-list").append(`
             <div class="position-entry" data-id="${id}">
                 <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
@@ -374,6 +374,14 @@ $(function() {
                 </div>
             </div>
         `);
+        // Scroll modal body so the new entry is visible
+        const modalBody = document.querySelector(".modal-body");
+        if (modalBody) {
+            setTimeout(function() {
+                const newEntry = modalBody.querySelector('.position-entry[data-id="' + id + '"]');
+                if (newEntry) newEntry.scrollIntoView({behavior: "smooth", block: "nearest"});
+            }, 60);
+        }
     }
 
     function addItemEntry(label = "", item = "", price = "") {
@@ -1236,32 +1244,87 @@ $(function() {
         filteredBlipSprites = allBlipSprites.slice();
     }
 
+    let _spriteObserver = null;
+
     function renderSpriteGrid(items) {
         const grid = document.getElementById("blip-sprite-grid");
         if (!grid) return;
+
+        // Disconnect previous observer
+        if (_spriteObserver) { _spriteObserver.disconnect(); _spriteObserver = null; }
+
         grid.innerHTML = "";
         $("#blip-sprite-count").text(items.length);
         const currentId = parseInt($("#blip-sprite").val()) || 52;
+
+        // IntersectionObserver: load images only when they enter the viewport
+        if (window.IntersectionObserver) {
+            _spriteObserver = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        if (img.dataset.src) {
+                            img.src = img.dataset.src;
+                            delete img.dataset.src;
+                            _spriteObserver.unobserve(img);
+                        }
+                    }
+                });
+            }, { root: grid, rootMargin: "300px", threshold: 0 });
+        }
+
         items.forEach(function(s) {
             const card = document.createElement("div");
             card.className = "blip-sprite-card" + (s.id === currentId ? " selected" : "");
             card.dataset.id = s.id;
-            card.title = `${s.name} (${s.id})`;
-            card.innerHTML = `
-                <div class="blip-sprite-card-img">
-                    <img src="${getSpriteImgUrl(s.radarName)}" loading="lazy"
-                         onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" alt="${s.name}"/>
-                    <span style="display:none;" class="blip-sprite-card-fallback">${s.id}</span>
-                </div>
-                <div class="blip-sprite-card-label">${s.name}</div>
-                <div class="blip-sprite-card-id">${s.id}</div>
-            `;
+            card.title = s.name + " (" + s.id + ")";
+
+            const imgWrap = document.createElement("div");
+            imgWrap.className = "blip-sprite-card-img";
+
+            const img = document.createElement("img");
+            img.alt = s.name;
+            img.width = 42; img.height = 42;
+            const imgUrl = getSpriteImgUrl(s.radarName);
+            if (_spriteObserver) {
+                img.dataset.src = imgUrl; // lazy: loaded by observer
+            } else {
+                img.src = imgUrl; // fallback: no observer support
+            }
+            img.onerror = function() {
+                this.style.display = "none";
+                const fb = this.nextElementSibling;
+                if (fb) fb.style.display = "flex";
+            };
+
+            const fallback = document.createElement("span");
+            fallback.className = "blip-sprite-card-fallback";
+            fallback.style.display = "none";
+            fallback.textContent = s.id;
+
+            imgWrap.appendChild(img);
+            imgWrap.appendChild(fallback);
+
+            const labelEl = document.createElement("div");
+            labelEl.className = "blip-sprite-card-label";
+            labelEl.textContent = s.name;
+
+            const idEl = document.createElement("div");
+            idEl.className = "blip-sprite-card-id";
+            idEl.textContent = s.id;
+
+            card.appendChild(imgWrap);
+            card.appendChild(labelEl);
+            card.appendChild(idEl);
+
             card.addEventListener("click", function() {
                 setBlipSprite(s.id);
                 $("#blip-sprite-modal").fadeOut(150);
-                showNotification(`Sprite ${s.id} — ${s.name} selected`, "success");
+                showNotification("Sprite " + s.id + " — " + s.name + " selected", "success");
             });
+
             grid.appendChild(card);
+            if (_spriteObserver) _spriteObserver.observe(img);
         });
     }
 

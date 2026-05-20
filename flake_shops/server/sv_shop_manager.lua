@@ -119,12 +119,7 @@ function LoadShopsFromDatabase()
             for _, row in ipairs(result) do
                 local shopData = json.decode(row.shop_data)
                 if shopData then
-                    -- Convert position data to vector3
-                    if shopData.Pos then
-                        for i, pos in ipairs(shopData.Pos) do
-                            shopData.Pos[i] = vector3(pos.x, pos.y, pos.z)
-                        end
-                    end
+                    -- Keep positions as plain tables so heading/useHeading are preserved
                     Shops[row.shop_name] = shopData
                 end
             end
@@ -168,7 +163,10 @@ AddEventHandler('flake_shops:saveShop', function(shopData, editMode)
     if shopDataCopy.Pos then
         local positions = {}
         for i, pos in ipairs(shopDataCopy.Pos) do
-            table.insert(positions, {x = pos.x, y = pos.y, z = pos.z})
+            local posEntry = {x = pos.x, y = pos.y, z = pos.z}
+            if pos.heading   then posEntry.heading   = pos.heading   end
+            if pos.useHeading then posEntry.useHeading = pos.useHeading end
+            table.insert(positions, posEntry)
         end
         shopDataCopy.Pos = positions
     end
