@@ -149,8 +149,8 @@ function SpawnShopPed(shopName, shopConfig, position, index)
         Citizen.Wait(1)
     end
 
-    -- Create the ped
-    local heading = shopConfig.ShopPed.heading or 0.0
+    -- Create the ped (per-position heading takes priority, falls back to ShopPed.heading)
+    local heading = position.heading or shopConfig.ShopPed.heading or 0.0
     local ped = CreatePed(4, pedModel, position.x, position.y, position.z - 1.0, heading, false, true)
 
     -- Set ped attributes

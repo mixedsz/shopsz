@@ -82,9 +82,28 @@ end
 local function GetPlayerInfo()
     local playerId = GetPlayerServerId(PlayerId())
     local playerName = GetPlayerName(PlayerId())
-
-    -- Try to get discord avatar (this would need a server callback in production)
     local playerAvatar = "https://cdn.discordapp.com/embed/avatars/" .. (playerId % 5) .. ".png"
+
+    -- Try to get in-game character name from framework
+    if QBCore then
+        local pd = QBCore.Functions.GetPlayerData()
+        if pd and pd.charinfo then
+            local fn = pd.charinfo.firstname or ""
+            local ln = pd.charinfo.lastname or ""
+            if fn ~= "" or ln ~= "" then
+                playerName = (fn .. " " .. ln):gsub("^%s+", ""):gsub("%s+$", "")
+            end
+        end
+    elseif ESX then
+        local pd = ESX.GetPlayerData()
+        if pd then
+            local fn = pd.firstName or (pd.charinfo and pd.charinfo.firstname) or ""
+            local ln = pd.lastName or (pd.charinfo and pd.charinfo.lastname) or ""
+            if fn ~= "" or ln ~= "" then
+                playerName = (fn .. " " .. ln):gsub("^%s+", ""):gsub("%s+$", "")
+            end
+        end
+    end
 
     return {
         playerId = playerId,
@@ -153,11 +172,18 @@ end)
 RegisterNUICallback('getCurrentPosition', function(data, cb)
     local playerPed = PlayerPedId()
     local coords = GetEntityCoords(playerPed)
+    local heading = GetEntityHeading(playerPed)
     cb({
         x = coords.x,
         y = coords.y,
-        z = coords.z
+        z = coords.z,
+        heading = heading
     })
+end)
+
+RegisterNUICallback('getCurrentHeading', function(data, cb)
+    local heading = GetEntityHeading(PlayerPedId())
+    cb({ heading = heading })
 end)
 
 -- Store items callback

@@ -293,6 +293,8 @@ $(function() {
         $(".tab-pane").removeClass("active");
         $(".tab-pane[data-tab='basic']").addClass("active");
         renderCurrencyOptions();
+        setBlipSprite(52);
+        setBlipColour(2);
     }
 
     function renderCurrencyOptions() {
@@ -321,39 +323,54 @@ $(function() {
     function loadShopData(shopData) {
         $("#shop-name").val(shopData.name).prop("disabled", true);
         $("#shop-logo").val(shopData.ShopLogo || "blackmarket.png");
-        if (shopData.Pos) shopData.Pos.forEach(pos => addPositionEntry(pos.x, pos.y, pos.z));
+        if (shopData.Pos) shopData.Pos.forEach(pos => addPositionEntry(pos.x, pos.y, pos.z, pos.heading, !!pos.useHeading));
         if (shopData.Items) shopData.Items.forEach(item => addItemEntry(item.label, item.item, item.price));
         if (shopData.Currency) shopData.Currency.forEach(c => $(`.currency-check[value="${c}"]`).prop("checked", true));
         $("#use-pickup").prop("checked", shopData.UsePickup || false);
         $("#use-ped").prop("checked", shopData.UsePed || false);
         if (shopData.ShopPed) {
             $("#ped-model").val(shopData.ShopPed.model || "");
-            $("#ped-heading").val(shopData.ShopPed.heading || 0);
             $("#ped-scenario").val(shopData.ShopPed.scenario || "");
         }
         if (shopData.Blip) {
             $("#use-blip").prop("checked", true);
             $("#blip-settings").show();
             $("#blip-name").val(shopData.Blip.name || "");
-            $("#blip-sprite").val(shopData.Blip.sprite || 52);
-            $("#blip-colour").val(shopData.Blip.colour || 2);
+            setBlipSprite(shopData.Blip.sprite || 52);
+            setBlipColour(shopData.Blip.colour || 2);
             $("#blip-scale").val(shopData.Blip.scale || 0.7);
             $("#blip-shortrange").prop("checked", shopData.Blip.shortRange !== false);
         }
     }
 
-    function addPositionEntry(x = "", y = "", z = "") {
+    function addPositionEntry(x = "", y = "", z = "", heading = "", useHeading = false) {
         positionCounter++;
+        const id = positionCounter;
+        const headingChecked = useHeading ? "checked" : "";
+        const headingDisplay = useHeading ? "flex" : "none";
+        const headingVal = heading !== "" ? parseFloat(heading).toFixed(2) : "";
         $("#positions-list").append(`
-            <div class="position-entry" data-id="${positionCounter}">
+            <div class="position-entry" data-id="${id}">
                 <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-                    <div style="flex:1;min-width:150px;"><label>X Coordinate</label>
+                    <div style="flex:1;min-width:130px;"><label>X</label>
                         <input type="number" class="pos-x" placeholder="0.0000" value="${x}" step="0.0001"/></div>
-                    <div style="flex:1;min-width:150px;"><label>Y Coordinate</label>
+                    <div style="flex:1;min-width:130px;"><label>Y</label>
                         <input type="number" class="pos-y" placeholder="0.0000" value="${y}" step="0.0001"/></div>
-                    <div style="flex:1;min-width:150px;"><label>Z Coordinate</label>
+                    <div style="flex:1;min-width:130px;"><label>Z</label>
                         <input type="number" class="pos-z" placeholder="0.0000" value="${z}" step="0.0001"/></div>
                     <button class="btn-remove remove-position">Remove</button>
+                </div>
+                <div class="pos-heading-row" style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap;">
+                    <label class="checkbox-label" style="margin:0;">
+                        <input type="checkbox" class="pos-use-heading" ${headingChecked}>
+                        <span>Use Heading</span>
+                    </label>
+                    <div class="pos-heading-fields" style="display:${headingDisplay};align-items:center;gap:8px;flex:1;">
+                        <input type="number" class="pos-heading" placeholder="0.00" value="${headingVal}" step="0.01" style="max-width:120px;"/>
+                        <button type="button" class="btn-secondary btn-get-heading" style="padding:6px 10px;font-size:12px;" title="Use your current in-game heading">
+                            <i class="fas fa-compass"></i> Current Heading
+                        </button>
+                    </div>
                 </div>
             </div>
         `);
@@ -379,7 +396,27 @@ $(function() {
     $("#add-position").on("click", function() { addPositionEntry(); });
     $("#add-current-position").on("click", function() {
         $.post("https://flake_shops/getCurrentPosition", JSON.stringify({}), function(pos) {
-            if (pos && pos.x) { addPositionEntry(pos.x, pos.y, pos.z); showNotification("Current position added!", "success"); }
+            if (pos && pos.x !== undefined) {
+                addPositionEntry(pos.x, pos.y, pos.z, pos.heading, true);
+                showNotification("Current position & heading added!", "success");
+            }
+        });
+    });
+
+    // Per-position heading toggle
+    $("body").on("change", ".pos-use-heading", function() {
+        const fields = $(this).closest(".pos-heading-row").find(".pos-heading-fields");
+        $(this).is(":checked") ? fields.show() : fields.hide();
+    });
+
+    // Per-position "Current Heading" button
+    $("body").on("click", ".btn-get-heading", function() {
+        const entry = $(this).closest(".position-entry");
+        $.post("https://flake_shops/getCurrentHeading", JSON.stringify({}), function(res) {
+            if (res && res.heading !== undefined) {
+                entry.find(".pos-heading").val(parseFloat(res.heading).toFixed(2));
+                showNotification("Current heading applied!", "success");
+            }
         });
     });
     $("#add-item").on("click", function() { addItemEntry(); });
@@ -410,7 +447,16 @@ $(function() {
             const x = parseFloat($(this).find(".pos-x").val()),
                   y = parseFloat($(this).find(".pos-y").val()),
                   z = parseFloat($(this).find(".pos-z").val());
-            if (!isNaN(x) && !isNaN(y) && !isNaN(z)) positions.push({x, y, z});
+            if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+                const pos = {x, y, z};
+                const useHeading = $(this).find(".pos-use-heading").is(":checked");
+                if (useHeading) {
+                    const h = parseFloat($(this).find(".pos-heading").val());
+                    pos.heading = isNaN(h) ? 0.0 : h;
+                    pos.useHeading = true;
+                }
+                positions.push(pos);
+            }
         });
         if (!positions.length) { showNotification("Please add at least one position!", "error"); return; }
 
@@ -436,7 +482,6 @@ $(function() {
         if (shopData.UsePed) {
             shopData.ShopPed = {
                 model: $("#ped-model").val().trim() || "mp_m_shopkeep_01",
-                heading: parseFloat($("#ped-heading").val()) || 0.0,
                 scenario: $("#ped-scenario").val().trim() || "WORLD_HUMAN_STAND_IMPATIENT"
             };
         }
@@ -450,6 +495,7 @@ $(function() {
                 shortRange: $("#blip-shortrange").is(":checked")
             };
         }
+
 
         $.post("https://flake_shops/saveShop", JSON.stringify({ shopData, editMode }), function() {
             showNotification(`Shop "${shopName}" saved!`, "success");
@@ -711,6 +757,266 @@ $(function() {
     $("#admin-wrapper").on("click", function(e) {
         if (e.target === this) closeAdmin();
     });
+
+    // ══════════════════════════════════════════════════════════
+    //  BLIP SPRITE & COLOR PICKERS
+    // ══════════════════════════════════════════════════════════
+
+    // Named sprites (sparse map — unlisted ones show as "Sprite N")
+    const BLIP_SPRITE_NAMES = {
+        0:'Blank',1:'White Circle',3:'Player',4:'Colt',8:'Police Car',9:'Car',11:'Cab',12:'Truck',
+        14:'Boat',15:'Plane',16:'Helicopter',17:'Motorcycle',18:'Dirt Bike',19:'SUV',20:'Big Truck',
+        21:'Sports Car',25:'General Store',26:'Barber',27:'Hospital',28:'Ammo Shop',30:'Police Dept',
+        37:'Fire Station',38:'Hospital 2',40:'Barber 2',41:'Clothing Store',42:'Tattoo',43:'Shop',
+        44:'Mod Shop',50:'Race',51:'Mod Shop 2',52:'Shopping Cart',53:'Weapons',54:'Gun Shop',
+        57:'Gas Station',58:'Airport',59:'ATM',60:'Police Car 2',61:'Police Car 3',62:'Fire Truck',
+        63:'Police Helicopter',64:'Barber 3',65:'Fashion Store',66:'Police Station',67:'Dollar Sign',
+        68:'Ammo',69:'Shopping Cart 2',70:'Hunting',72:'Taxi',73:'Plane 2',75:'Parking',
+        77:'Parachute',85:'Race Flag',100:'Shark',101:'Letter',102:'Semi Truck',103:'Speedboat',
+        104:'Hunting / Deer',105:'Bar',106:'Burger Shot',107:'Pizza',108:'Hotel',109:'Recording Studio',
+        110:'Camera',111:'Movie',112:'Satellite Dish',113:'Clothing',114:'Tattoo 2',120:'Church',
+        123:'Skull / Danger',124:'Ammo Box',126:'Clothing 2',127:'Armored Truck',128:'Bounty',
+        130:'Diamond',131:'Freight',132:'Container Port',133:'Safe / Lock',137:'Snowflake',
+        140:'Horse Racing',141:'Speedboat 2',143:'Surfboard',150:'Trophy',151:'BMX',152:'Swimming',
+        153:'Parachute 2',154:'Golf',155:'Tennis',158:'Swimming Pool',161:'Strip Club',
+        162:'Chop Shop',163:'Spray Can',164:'Gang Territory',165:'Yoga',166:'Scooter',199:'Phone',
+        205:'Camera 2',208:'Basketball',224:'Gym',225:'Museum',226:'Library',227:'Pharmacy',
+        228:'Gun Store',229:'Key',232:'Armored Car',233:'Target',236:'VIP',260:'Crown',
+        261:'Diamond 2',262:'Scales',308:'Casino Chip',313:'General Store 2',326:'Food Stall',
+        329:'Boat Shop',330:'Airport 2',331:'Submarine',336:'Market',337:'Emergency Room',
+        352:'Lawyer',355:'Cinema',365:'Electronics',366:'Flower Shop',407:'Champagne',
+        408:'Property',409:'Pawn Shop',414:'Bull',432:'Slot Machine',433:'Poker Chips',434:'Drink',
+        490:'Crate',491:'Package',500:'Gang Car',501:'Bike',502:'Bicycle',503:'Helicopter 2',
+        504:'Jet Ski',505:'Boat 2',506:'Plane 3',507:'SUV 2',508:'Truck 2',509:'Van',
+        510:'Chopper',511:'Boat 3',512:'Motor Boat',520:'Custom Bike',521:'Custom Car',
+        522:'Custom Truck',523:'Custom Van',530:'Weapons 2',531:'Melee',532:'Pistol',533:'Shotgun',
+        534:'Assault Rifle',535:'Sniper',536:'Heavy Weapons',537:'Explosives',538:'Gear',539:'Parachute 3',
+        545:'Garage',546:'Impound',547:'Mod Shop 3',548:'Helipad',549:'Boat Dock',580:'Weed',
+        581:'Drug',582:'Cash',583:'Gold',584:'Jewelry',585:'Art',586:'Document',587:'Weapons 3',
+        600:'Text',601:'Question Mark',602:'Exclamation',603:'Star',604:'Circle',605:'Diamond 3',
+        606:'Heart',607:'Cross',608:'Check',609:'X Mark',610:'Arrow',611:'Flag',612:'Lock',
+        613:'Key 2',614:'Door',615:'Briefcase',616:'Bag',617:'Box',618:'Chest',619:'Safe',
+        620:'Truck 3',621:'Car 2',622:'Motorcycle 2',623:'Helicopter 3',624:'Plane 4',625:'Boat 4',
+    };
+
+    const BLIP_COLORS = [
+        {id:0,hex:'#FFFFFF',name:'White'},
+        {id:1,hex:'#FF0000',name:'Red'},
+        {id:2,hex:'#7FFF00',name:'Bright Green'},
+        {id:3,hex:'#1469C9',name:'Blue'},
+        {id:4,hex:'#FFD700',name:'Yellow'},
+        {id:5,hex:'#F4A460',name:'Light Orange'},
+        {id:6,hex:'#EE82EE',name:'Violet'},
+        {id:7,hex:'#FF69B4',name:'Pink'},
+        {id:8,hex:'#FA8072',name:'Salmon'},
+        {id:9,hex:'#DAA520',name:'Gold'},
+        {id:10,hex:'#00BFFF',name:'Cyan'},
+        {id:11,hex:'#90EE90',name:'Light Green'},
+        {id:12,hex:'#800080',name:'Purple'},
+        {id:13,hex:'#00CED1',name:'Turquoise'},
+        {id:14,hex:'#ADFF2F',name:'Yellow-Green'},
+        {id:15,hex:'#D3D3D3',name:'Light Gray'},
+        {id:16,hex:'#4169E1',name:'Royal Blue'},
+        {id:17,hex:'#DA70D6',name:'Orchid'},
+        {id:18,hex:'#FFEC8B',name:'Light Yellow'},
+        {id:19,hex:'#00008B',name:'Dark Blue'},
+        {id:20,hex:'#6495ED',name:'Cornflower Blue'},
+        {id:21,hex:'#006400',name:'Dark Green'},
+        {id:22,hex:'#B22222',name:'Firebrick'},
+        {id:23,hex:'#8B008B',name:'Dark Magenta'},
+        {id:24,hex:'#00CED1',name:'Dark Turquoise'},
+        {id:25,hex:'#0000CD',name:'Medium Blue'},
+        {id:26,hex:'#6B8E23',name:'Olive Drab'},
+        {id:27,hex:'#FF1493',name:'Deep Pink'},
+        {id:28,hex:'#FF8C00',name:'Dark Orange'},
+        {id:29,hex:'#FFD700',name:'Gold 2'},
+        {id:30,hex:'#00FA9A',name:'Medium Spring Green'},
+        {id:31,hex:'#7CFC00',name:'Lawn Green'},
+        {id:32,hex:'#32CD32',name:'Lime Green'},
+        {id:33,hex:'#0080FF',name:'Azure Blue'},
+        {id:34,hex:'#00FFFF',name:'Aqua'},
+        {id:35,hex:'#2E8B57',name:'Sea Green'},
+        {id:36,hex:'#00FF00',name:'Lime'},
+        {id:37,hex:'#008080',name:'Teal'},
+        {id:38,hex:'#000080',name:'Navy'},
+        {id:39,hex:'#4B0082',name:'Indigo'},
+        {id:40,hex:'#FF00FF',name:'Magenta'},
+        {id:41,hex:'#FF69B4',name:'Hot Pink'},
+        {id:42,hex:'#FFD700',name:'Yellow 2'},
+        {id:43,hex:'#008000',name:'Green'},
+        {id:44,hex:'#228B22',name:'Forest Green'},
+        {id:45,hex:'#20B2AA',name:'Light Sea Green'},
+        {id:46,hex:'#87CEEB',name:'Sky Blue'},
+        {id:47,hex:'#9370DB',name:'Medium Purple'},
+        {id:48,hex:'#FF1493',name:'Deep Pink 2'},
+        {id:49,hex:'#DC143C',name:'Crimson'},
+        {id:50,hex:'#FFD700',name:'Gold 3'},
+        {id:51,hex:'#FF8C00',name:'Orange'},
+        {id:52,hex:'#F0E68C',name:'Khaki'},
+        {id:53,hex:'#FFFFE0',name:'Light Yellow 2'},
+        {id:54,hex:'#191970',name:'Midnight Blue'},
+        {id:55,hex:'#FFB6C1',name:'Light Pink'},
+        {id:56,hex:'#32CD32',name:'Lime 2'},
+        {id:57,hex:'#E0FFFF',name:'Light Cyan'},
+        {id:58,hex:'#87CEFA',name:'Light Sky Blue'},
+        {id:59,hex:'#808080',name:'Gray'},
+        {id:60,hex:'#555555',name:'Dark Gray'},
+        {id:61,hex:'#F5F5F5',name:'White Smoke'},
+        {id:62,hex:'#DAA520',name:'Goldenrod'},
+        {id:63,hex:'#FFCBA4',name:'Peach'},
+        {id:64,hex:'#BF94E4',name:'Lavender'},
+        {id:65,hex:'#20B2AA',name:'Teal 2'},
+        {id:66,hex:'#FA8072',name:'Salmon 2'},
+        {id:67,hex:'#C0C0C0',name:'Silver'},
+        {id:68,hex:'#5F9EA0',name:'Cadet Blue'},
+        {id:69,hex:'#F4A460',name:'Sandy Brown'},
+        {id:70,hex:'#FF4500',name:'Orange Red'},
+        {id:71,hex:'#6495ED',name:'Cornflower 2'},
+        {id:72,hex:'#1E90FF',name:'Dodger Blue'},
+        {id:73,hex:'#87CEEB',name:'Sky Blue 2'},
+        {id:74,hex:'#66CDAA',name:'Medium Aqua'},
+        {id:75,hex:'#90EE90',name:'Light Green 2'},
+        {id:76,hex:'#F5DEB3',name:'Wheat'},
+        {id:77,hex:'#800000',name:'Maroon'},
+        {id:78,hex:'#B22222',name:'Firebrick 2'},
+        {id:79,hex:'#FF00FF',name:'Magenta 2'},
+        {id:80,hex:'#D2691E',name:'Chocolate'},
+        {id:81,hex:'#FF6347',name:'Tomato'},
+        {id:82,hex:'#CD5C5C',name:'Indian Red'},
+        {id:83,hex:'#A0522D',name:'Sienna'},
+        {id:84,hex:'#696969',name:'Dim Gray'},
+        {id:85,hex:'#DCDCDC',name:'Gainsboro'},
+    ];
+
+    // Total number of sprite IDs to display (GTA V goes up to ~826)
+    const BLIP_SPRITE_TOTAL = 630;
+
+    function getSpriteName(id) {
+        return BLIP_SPRITE_NAMES[id] || `Sprite ${id}`;
+    }
+
+    function getSpriteImgUrl(id) {
+        return `https://docs.fivem.net/blips/blip_${id}.png`;
+    }
+
+    function setBlipSprite(id) {
+        id = parseInt(id) || 52;
+        $("#blip-sprite").val(id);
+        const imgEl = document.getElementById("blip-sprite-img");
+        const labelEl = document.getElementById("blip-sprite-id-label");
+        if (imgEl && labelEl) {
+            imgEl.src = getSpriteImgUrl(id);
+            imgEl.style.display = "";
+            labelEl.style.display = "none";
+            labelEl.textContent = id;
+            imgEl.onerror = function() {
+                this.style.display = "none";
+                labelEl.style.display = "flex";
+                labelEl.textContent = id;
+            };
+        }
+    }
+
+    function setBlipColour(id) {
+        id = parseInt(id) || 2;
+        $("#blip-colour").val(id);
+        const colorData = BLIP_COLORS.find(c => c.id === id);
+        const hex = colorData ? colorData.hex : "#CCCCCC";
+        const name = colorData ? colorData.name : `Color ${id}`;
+        $("#blip-colour-swatch").css("background", hex);
+        $("#blip-colour-label").text(`${name} (${id})`);
+        // Update selected state in grid
+        $("#blip-colour-grid .blip-colour-cell").removeClass("selected");
+        $(`#blip-colour-grid .blip-colour-cell[data-id="${id}"]`).addClass("selected");
+    }
+
+    function buildColorGrid() {
+        const grid = $("#blip-colour-grid");
+        grid.empty();
+        BLIP_COLORS.forEach(c => {
+            grid.append(
+                `<div class="blip-colour-cell" data-id="${c.id}" title="${c.name} (${c.id})"
+                      style="background:${c.hex};" ></div>`
+            );
+        });
+        // Mark current selection
+        setBlipColour(parseInt($("#blip-colour").val()) || 2);
+    }
+
+    $("body").on("click", ".blip-colour-cell", function() {
+        setBlipColour(parseInt($(this).attr("data-id")));
+    });
+
+    // Sprite picker
+    let allBlipSprites = [];
+    let filteredBlipSprites = [];
+
+    function buildSpriteList() {
+        allBlipSprites = [];
+        for (let i = 0; i < BLIP_SPRITE_TOTAL; i++) {
+            allBlipSprites.push({id: i, name: getSpriteName(i)});
+        }
+        filteredBlipSprites = allBlipSprites.slice();
+    }
+
+    function renderSpriteGrid(items) {
+        const grid = document.getElementById("blip-sprite-grid");
+        if (!grid) return;
+        grid.innerHTML = "";
+        $("#blip-sprite-count").text(items.length);
+        const currentId = parseInt($("#blip-sprite").val()) || 52;
+        items.forEach(function(s) {
+            const card = document.createElement("div");
+            card.className = "blip-sprite-card" + (s.id === currentId ? " selected" : "");
+            card.dataset.id = s.id;
+            card.title = `${s.name} (${s.id})`;
+            card.innerHTML = `
+                <div class="blip-sprite-card-img">
+                    <img src="${getSpriteImgUrl(s.id)}" loading="lazy"
+                         onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" alt="${s.name}"/>
+                    <span style="display:none;" class="blip-sprite-card-fallback">${s.id}</span>
+                </div>
+                <div class="blip-sprite-card-label">${s.name}</div>
+                <div class="blip-sprite-card-id">${s.id}</div>
+            `;
+            card.addEventListener("click", function() {
+                setBlipSprite(s.id);
+                $("#blip-sprite-modal").fadeOut(150);
+                showNotification(`Sprite ${s.id} (${s.name}) selected`, "success");
+            });
+            grid.appendChild(card);
+        });
+    }
+
+    $("#open-sprite-picker").on("click", function() {
+        if (!allBlipSprites.length) buildSpriteList();
+        filteredBlipSprites = allBlipSprites.slice();
+        $("#blip-sprite-search").val("");
+        renderSpriteGrid(filteredBlipSprites);
+        $("#blip-sprite-modal").fadeIn(150);
+    });
+
+    $("#close-sprite-picker").on("click", function() {
+        $("#blip-sprite-modal").fadeOut(150);
+    });
+
+    let spriteSearchTimeout;
+    $("#blip-sprite-search").on("input", function() {
+        clearTimeout(spriteSearchTimeout);
+        const term = this.value.toLowerCase().trim();
+        spriteSearchTimeout = setTimeout(function() {
+            filteredBlipSprites = term
+                ? allBlipSprites.filter(s =>
+                    s.name.toLowerCase().includes(term) ||
+                    String(s.id).includes(term))
+                : allBlipSprites.slice();
+            renderSpriteGrid(filteredBlipSprites);
+        }, 150);
+    });
+
+    // Init color grid and default sprite preview
+    buildColorGrid();
+    setBlipSprite(52);
 
     // ── Dashboard analytics cards (all shops overview) ────────
     function formatAnalyticsDate(val) {

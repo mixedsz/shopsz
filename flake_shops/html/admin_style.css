@@ -2252,3 +2252,261 @@ body.light-theme .item-card.selectable:hover {
     font-weight: 600;
     transition: width 0.5s ease;
 }
+/* ========================================
+   BLIP SPRITE & COLOR PICKERS
+======================================== */
+
+/* Sprite picker trigger area */
+.blip-sprite-picker-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.blip-sprite-preview {
+    width: 52px;
+    height: 52px;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.blip-sprite-preview img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    image-rendering: pixelated;
+}
+
+#blip-sprite-id-label {
+    color: #9ca3af;
+    font-size: 14px;
+    font-weight: 700;
+    width: 100%;
+    justify-content: center;
+}
+
+/* Color picker display */
+.blip-colour-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.blip-colour-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.15);
+    flex-shrink: 0;
+}
+
+#blip-colour-label {
+    color: #e5e7eb;
+    font-size: 13px;
+}
+
+/* Color grid */
+.blip-colour-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    max-height: 160px;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.blip-colour-cell {
+    width: 28px;
+    height: 28px;
+    border-radius: 5px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform .15s, border-color .15s;
+    flex-shrink: 0;
+}
+
+.blip-colour-cell:hover {
+    transform: scale(1.2);
+    border-color: rgba(255,255,255,0.5);
+}
+
+.blip-colour-cell.selected {
+    border-color: #fff;
+    transform: scale(1.15);
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.3);
+}
+
+/* Blip sprite picker modal */
+#blip-sprite-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#blip-sprite-modal .modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+}
+
+.blip-sprite-container {
+    position: relative;
+    z-index: 1;
+    background: #111;
+    border: 1px solid #2a2a2a;
+    border-radius: 14px;
+    width: 760px;
+    max-width: 94vw;
+    max-height: 82vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 25px 80px rgba(0,0,0,0.8);
+}
+
+.blip-sprite-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 20px;
+    border-bottom: 1px solid #1e1e1e;
+    flex-shrink: 0;
+}
+
+.blip-sprite-header h2 {
+    color: #fff;
+    font-size: 17px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.blip-sprite-search-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #111;
+    border-bottom: 1px solid #1e1e1e;
+    flex-shrink: 0;
+}
+
+#blip-sprite-search {
+    width: 100%;
+    padding: 9px 14px 9px 36px;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    color: #e5e7eb;
+    font-size: 13px;
+    outline: none;
+    transition: border-color .2s;
+    box-sizing: border-box;
+    margin-bottom: 0;
+}
+#blip-sprite-search:focus { border-color: var(--accent); }
+#blip-sprite-search::placeholder { color: #4b5563; }
+
+#blip-sprite-grid {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 8px;
+    align-content: start;
+}
+
+.blip-sprite-card {
+    background: #1a1a1a;
+    border: 1px solid #252525;
+    border-radius: 8px;
+    padding: 8px 6px 6px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    transition: border-color .15s, background .15s, transform .15s;
+}
+
+.blip-sprite-card:hover {
+    border-color: var(--accent);
+    background: #222;
+    transform: translateY(-2px);
+}
+
+.blip-sprite-card.selected {
+    border-color: var(--accent);
+    background: rgba(var(--accent-rgb), 0.1);
+}
+
+.blip-sprite-card-img {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.blip-sprite-card-img img {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+    image-rendering: pixelated;
+}
+
+.blip-sprite-card-fallback {
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 700;
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #111;
+    border-radius: 6px;
+}
+
+.blip-sprite-card-label {
+    color: #9ca3af;
+    font-size: 10px;
+    text-align: center;
+    line-height: 1.3;
+    max-width: 80px;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.blip-sprite-card-id {
+    color: #4b5563;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+/* Per-position heading row */
+.pos-heading-row {
+    padding-top: 4px;
+}
+
+.pos-heading-fields input[type="number"] {
+    margin-bottom: 0 !important;
+}
+
+.btn-get-heading {
+    white-space: nowrap;
+    flex-shrink: 0;
+}

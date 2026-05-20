@@ -44,8 +44,7 @@ escrow_ignore {
     'server/sv_analytics.lua',     -- NEW: Analytics server
     'config/*.lua',
 	'logs.lua',
-	'shops.sql',
-	'enhanced_shops_analytics.sql' -- NEW: Analytics database
+	'shops.sql'
 }
 
 dependency '/assetpacks'
