@@ -94,11 +94,11 @@ body {
 }
 
 .logo img {
-    height: 36px;
-    width: 36px;
-    object-fit: cover;
-    border-radius: 8px;
-    border: 1px solid #2a2a2a;
+    height: 48px;
+    max-width: 160px;
+    width: auto;
+    object-fit: contain;
+    border-radius: 6px;
 }
 
 /* Shop name */

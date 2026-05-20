@@ -304,18 +304,18 @@
                         </div>
 
                         <div class="form-section">
-                            <div class="section-icon"><i class="fas fa-compass"></i></div>
-                            <div class="section-content">
-                                <h3>Heading</h3>
-                                <input type="number" id="ped-heading" placeholder="0.0" value="0.0" step="0.1" />
-                            </div>
-                        </div>
-
-                        <div class="form-section">
                             <div class="section-icon"><i class="fas fa-video"></i></div>
                             <div class="section-content">
                                 <h3>Scenario</h3>
                                 <input type="text" id="ped-scenario" placeholder="WORLD_HUMAN_STAND_IMPATIENT" value="WORLD_HUMAN_STAND_IMPATIENT" />
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <div class="section-icon"><i class="fas fa-info-circle"></i></div>
+                            <div class="section-content">
+                                <h3>Heading per Location</h3>
+                                <p style="color:#6b7280;font-size:13px;">Each location now has its own heading setting. Configure heading for each position in the <strong style="color:#e5e7eb;">Locations</strong> section on the Basic Info tab.</p>
                             </div>
                         </div>
                     </div>
@@ -345,8 +345,16 @@
                             <div class="form-section">
                                 <div class="section-icon"><i class="fas fa-icons"></i></div>
                                 <div class="section-content">
-                                    <h3>Sprite ID</h3>
-                                    <input type="number" id="blip-sprite" placeholder="52" value="52" />
+                                    <h3>Sprite</h3>
+                                    <input type="hidden" id="blip-sprite" value="52" />
+                                    <div class="blip-sprite-picker-wrap">
+                                        <div id="blip-sprite-preview" class="blip-sprite-preview">
+                                            <img id="blip-sprite-img" src="" onerror="this.style.display='none';document.getElementById('blip-sprite-id-label').style.display='flex';" alt="blip" />
+                                            <span id="blip-sprite-id-label" style="display:none;">52</span>
+                                        </div>
+                                        <button type="button" id="open-sprite-picker" class="btn-secondary"><i class="fas fa-th"></i> Choose Sprite</button>
+                                    </div>
+                                    <small>Click to browse all available map blip icons</small>
                                 </div>
                             </div>
 
@@ -354,7 +362,12 @@
                                 <div class="section-icon"><i class="fas fa-palette"></i></div>
                                 <div class="section-content">
                                     <h3>Color</h3>
-                                    <input type="number" id="blip-colour" placeholder="2" value="2" />
+                                    <input type="hidden" id="blip-colour" value="2" />
+                                    <div id="blip-colour-display" class="blip-colour-display">
+                                        <span id="blip-colour-swatch" class="blip-colour-swatch"></span>
+                                        <span id="blip-colour-label">Color 2</span>
+                                    </div>
+                                    <div id="blip-colour-grid" class="blip-colour-grid"></div>
                                 </div>
                             </div>
 
@@ -464,6 +477,28 @@
 
     <!-- Custom Notification Toast -->
     <div id="notification-container"></div>
+
+    <!-- Blip Sprite Picker Modal -->
+    <div id="blip-sprite-modal" style="display:none;">
+        <div class="modal-overlay"></div>
+        <div class="blip-sprite-container">
+            <div class="blip-sprite-header">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <i class="fas fa-map-marker-alt" style="color:var(--accent);font-size:18px;"></i>
+                    <h2>Select Blip Sprite</h2>
+                </div>
+                <button id="close-sprite-picker" class="modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="blip-sprite-search-row">
+                <div class="isel-search-wrap">
+                    <i class="fas fa-search isel-search-icon"></i>
+                    <input type="text" id="blip-sprite-search" placeholder="Search by name or ID…" autocomplete="off"/>
+                </div>
+                <div class="isel-count-badge"><span id="blip-sprite-count">0</span> sprites</div>
+            </div>
+            <div id="blip-sprite-grid" class="blip-sprite-grid"></div>
+        </div>
+    </div>
 
     <!-- Load both scripts -->
     <script src="script.js" type="text/javascript"></script>
